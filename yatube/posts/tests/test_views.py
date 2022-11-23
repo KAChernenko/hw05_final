@@ -228,35 +228,3 @@ class PostPagesTests(TestCase):
         response = self.follower_client.get(reverse('posts:follow_index'))
         self.assertTrue(count_post_follower)
         self.assertFalse(len(response.context['page_obj']))
-
-
-class PaginatorViewsTest(TestCase):
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        cls.guest_client = Client()
-        cls.user = User.objects.create_user(username='auth')
-        cls.authorized_client = Client()
-        cls.authorized_client.force_login(cls.user)
-
-        cls.group = Group.objects.create(
-            title='Тестовый заголовок',
-            slug='test-slug',
-            description='Тестовое описание'
-
-        )
-
-        objs = [Post(author=cls.user, text=f'Тестовый пост {i}',
-                group=cls.group) for i in range(13)]
-        Post.objects.bulk_create(objs)
-
-    def test_paginator_first_page_contains_10_posts(self):
-        """Колличество постов на первой странице равно 10"""
-        response = self.client.get(reverse('posts:index'))
-        self.assertEqual(len(response.context['page_obj']), 10)
-
-    def test_paginator_second_page_contains_3_posts(self):
-        response = self.guest_client.get(
-            reverse('posts:index') + '?page=2'
-        )
-        self.assertEqual(len(response.context['page_obj']), 3)
