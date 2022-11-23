@@ -234,40 +234,29 @@ class PaginatorViewsTest(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.user = User.objects.create(
-            username='auth',
-        )
+        cls.guest_client = Client()
+        cls.user = User.objects.create_user(username='auth')
+        cls.authorized_client = Client()
+        cls.authorized_client.force_login(cls.user)
+
         cls.group = Group.objects.create(
-            title='Тестовое название группы',
-            slug='test_slug',
-            description='Тестовое описание группы',
+            title='Тестовый заголовок',
+            slug='test-slug',
+            description='Тестовое описание'
+
         )
-        for i in range(13):
-            Post.objects.create(
-                text=f'Пост #{i}',
-                author=cls.user,
-                group=cls.group
-            )
 
-    def setUp(self):
-        self.unauthorized_client = Client()
+        objs = [Post(author=cls.user, text=f'Тестовый пост {i}',
+                group=cls.group) for i in range(13)]
+        Post.objects.bulk_create(objs)
 
-    def test_paginator_on_pages(self):
-        """Проверка пагинации на страницах."""
-        posts_on_first_page = 10
-        posts_on_second_page = 3
-        url_pages = [
-            reverse('posts:index'),
-            reverse('posts:group_list', kwargs={'slug': self.group.slug}),
-            reverse('posts:profile', kwargs={'username': self.user.username}),
-        ]
-        for reverse_ in url_pages:
-            with self.subTest(reverse_=reverse_):
-                self.assertEqual(len(self.unauthorized_client.get(
-                    reverse_).context.get('page_obj')),
-                    posts_on_first_page
-                )
-                self.assertEqual(len(self.unauthorized_client.get(
-                    reverse_ + '?page=2').context.get('page_obj')),
-                    posts_on_second_page
-                )
+    def test_paginator_first_page_contains_10_posts(self):
+        """Колличество постов на первой странице равно 10"""
+        response = self.client.get(reverse('posts:index'))
+        self.assertEqual(len(response.context['page_obj']), 10)
+
+    def test_paginator_second_page_contains_3_posts(self):
+        response = self.guest_client.get(
+            reverse('posts:index') + '?page=2'
+        )
+        self.assertEqual(len(response.context['page_obj']), 3)
