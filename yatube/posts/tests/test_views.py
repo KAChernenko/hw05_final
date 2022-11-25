@@ -64,7 +64,8 @@ class PostPagesTests(TestCase):
             reverse('posts:post_create'): 'posts/post_create.html',
             reverse('posts:post_edit',
                     kwargs={'post_id':
-                            self.post.id}): 'posts/post_create.html'}
+                            self.post.id}): 'posts/post_create.html',
+            reverse('posts:follow_index'): 'posts/follow.html'}
         for url, template in templates_url_names.items():
             with self.subTest(url=url):
                 response = self.authorized_client.get(url)

@@ -34,7 +34,8 @@ class StaticURLTests(TestCase):
             f"/posts/{cls.post.id}/": "posts/post_detail.html",
         }
         cls.private_urls = {
-            "/create/": "posts/post_create.html"
+            "/create/": "posts/post_create.html",
+            '/follow/': 'posts/follow.html'
         }
         cls.author_urls = {
             f'/posts/{cls.post.id}/edit/': 'posts/post_create.html',

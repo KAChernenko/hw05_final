@@ -1,7 +1,6 @@
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 from django.core.paginator import Paginator
-from django.views.decorators.cache import cache_page
 
 from .forms import CommentForm, PostForm
 from .models import Follow, Group, Post, User
@@ -9,17 +8,16 @@ from .models import Follow, Group, Post, User
 POSTS_IN_PAGE: int = 10
 
 
-def pagin(request, queryset):
+def get_page_obj(page_number, queryset):
     paginator = Paginator(queryset, POSTS_IN_PAGE)
-    page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     return page_obj
 
 
-@cache_page(20)
 def index(request):
     post_list = Post.objects.all()
-    page_obj = pagin(request, post_list)
+    page_number = request.GET.get('page')
+    page_obj = get_page_obj(page_number, post_list)
     context = {
         'page_obj': page_obj,
     }
@@ -29,7 +27,7 @@ def index(request):
 def group_posts(request, slug):
     group = get_object_or_404(Group, slug=slug)
     posts = group.posts.all()
-    page_obj = pagin(request, posts)
+    page_obj = get_page_obj(request, posts)
     context = {
         'page_obj': page_obj,
         'group': group,
@@ -41,13 +39,10 @@ def group_posts(request, slug):
 def profile(request, username):
     author = get_object_or_404(User, username=username)
     posts = author.posts.select_related('author').all()
-    page_obj = pagin(request, posts)
-    following = False
-    if request.user.is_authenticated:
-        following = Follow.objects.filter(
-            user=request.user,
-            author=author
-        ).exists()
+    page_obj = get_page_obj(request, posts)
+    following = Follow.objects.filter(
+        author=author
+    ).exists()
     context = {
         'author': author,
         'posts': posts,
@@ -61,11 +56,10 @@ def post_detail(request, post_id):
     post = get_object_or_404(Post, pk=post_id)
     posts_count = post.author.posts.count()
     comments = post.comments.all()
-    form = CommentForm(request.POST or None)
     context = {
         'post': post,
         'posts_count': posts_count,
-        'form': form,
+        'form': CommentForm(),
         'comments': comments
     }
     return render(request, 'posts/post_detail.html', context)
@@ -116,7 +110,10 @@ def add_comment(request, post_id):
         comment.author = request.user
         comment.post = post
         comment.save()
-    return redirect('posts:post_detail', post_id=post_id)
+        return redirect('posts:post_detail', post_id=post_id)
+    else:
+        render(request, 'post/post_detail.html', form)
+
 
 
 @login_required
@@ -124,7 +121,7 @@ def follow_index(request):
     list_posts = Post.objects.filter(
         author__following__user=request.user
     ).select_related('author', 'group')
-    page_obj = pagin(request, list_posts)
+    page_obj = get_page_obj(request, list_posts)
     context = {'page_obj': page_obj}
     return render(request, 'posts/follow.html', context)
 
@@ -132,14 +129,8 @@ def follow_index(request):
 @login_required
 def profile_follow(request, username):
     author = get_object_or_404(User, username=username)
-    if (
-            not User.objects.filter(
-                username=author,
-                following__user=request.user,
-            ).exists()
-            and author != request.user
-    ):
-        Follow.objects.create(user=request.user, author=author)
+    if author != request.user:
+        Follow.objects.get_or_create(user=request.user, author=author)
     return redirect('posts:profile', username=username)
 
 
