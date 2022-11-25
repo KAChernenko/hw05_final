@@ -115,7 +115,6 @@ def add_comment(request, post_id):
         render(request, 'post/post_detail.html', form)
 
 
-
 @login_required
 def follow_index(request):
     list_posts = Post.objects.filter(
