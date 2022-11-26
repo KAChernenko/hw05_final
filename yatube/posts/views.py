@@ -111,8 +111,7 @@ def add_comment(request, post_id):
         comment.post = post
         comment.save()
         return redirect('posts:post_detail', post_id=post_id)
-    else:
-        render(request, 'post/post_detail.html', form)
+    return render(request, 'post/post_detail.html', form)
 
 
 @login_required
